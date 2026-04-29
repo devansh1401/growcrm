@@ -15,6 +15,22 @@ export const verifyToken = async (req, res, next) => {
     }
 };
 
+export const verifyIsSameUser = (req, res, next) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user?._id?.toString();
+        const currentUserRole = req.user?.role;
+        const canManageUsers = ['manager', 'super_admin'].includes(currentUserRole);
+
+        if (!userId) return next(createError(400, 'User id is required'))
+        if (userId.toString() === currentUserId || canManageUsers) return next()
+
+        next(createError(403, 'You are not allowed to access this user'))
+    } catch (err) {
+        next(createError(500, err.message));
+    }
+};
+
 export const verifyEmployee = (req, res, next) => {
     try {
         verifyToken(req, res, () => {

@@ -1,22 +1,9 @@
-import { Close } from "@mui/icons-material";
-import { Autocomplete, IconButton, MenuItem, Modal, Select, TextField } from "@mui/material";
+import { Dialog, DialogActions, DialogContent, DialogTitle, Divider, Slide, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import React from "react";
 import { updateUser } from "../../redux/action/user";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  PiHandCoins,
-  PiHouseLine,
-  PiImage,
-  PiImages,
-  PiMapPinLine,
-  PiNotepad,
-  PiRuler,
-  PiXLight,
-} from "react-icons/pi";
-import { Divider, Dialog, DialogContent, DialogTitle, Slide, DialogActions } from "@mui/material";
-import { pakistanCities } from "../../constant";
-import { CFormSelect } from "@coreui/react";
+import { PiNotepad, PiXLight } from "react-icons/pi";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="down" ref={ref} {...props} />;
@@ -25,7 +12,7 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 const EditModal = ({ open, setOpen }) => {
   /////////////////////////////////////// VARIABLES ///////////////////////////////////////
   const dispatch = useDispatch();
-  const { currentEmployee, isFetching, error } = useSelector((state) => state.user);
+  const { currentEmployee, isFetching } = useSelector((state) => state.user);
   const initialEmployeeState = {
     firstName: "",
     lastName: "",
@@ -111,7 +98,7 @@ const EditModal = ({ open, setOpen }) => {
                     fullWidth
                     placeholder="Optional"
                     value={employeeData?.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
                   />
                 </td>
               </tr>

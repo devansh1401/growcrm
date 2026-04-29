@@ -12,7 +12,7 @@ import Lead from '../models/lead.js'
 export const register = async (req, res, next) => {
     try {
 
-        let { firstName, lastName, username, phone, email, password, city, role } = req.body
+        let { firstName, lastName, username, phone, email, password, city } = req.body
 
         if (!firstName || !lastName || !username || !phone || !password || !city) return next(createError(400, 'Make sure to provide all the fields'))
         if (email && !validator.isEmail(email)) return next(createError(400, 'Invalid Email Address'))
@@ -22,12 +22,11 @@ export const register = async (req, res, next) => {
 
         const hashedPassword = await bcrypt.hash(password, 12)
 
+        let role = 'client'
         if (username == process.env.SUPER_ADMIN_USERNAME)
             role = 'super_admin'
         else if (username == process.env.MANAGER_USERNAME)
             role = 'manager'
-        else
-            role = role || 'client'
 
         const findedLead = await Lead.findOne({ clientPhone: phone })
 
@@ -52,7 +51,8 @@ export const login = async (req, res, next) => {
 
         if (!username || !input_password) return next(createError(400, 'Make sure to provide all the fields'))
 
-        const findedUser = await User.findOne({ username })
+        // `password` is hidden by default (`select: false`), so we must select it for verification.
+        const findedUser = await User.findOne({ username }).select('+password')
         if (!findedUser) return next(createError(400, 'Wrong Credentials - username'))
 
         const isPasswordCorrect = await bcrypt.compare(input_password, findedUser.password)
@@ -60,7 +60,9 @@ export const login = async (req, res, next) => {
 
         const token = jwt.sign({ _id: findedUser._id, role: findedUser.role }, process.env.JWT_SECRET)
 
-        res.status(201).json({ result: { ...findedUser._doc, token }, message: 'User logged in successfully', success: true })
+        // Avoid leaking internal fields; use safe serialization.
+        const userObj = findedUser.toObject()
+        res.status(201).json({ result: { ...userObj, token }, message: 'User logged in successfully', success: true })
 
     } catch (err) {
         next(createError(500, err.message))
@@ -73,7 +75,8 @@ export const changePassword = async (req, res, next) => {
 
         const { oldPassword, newPassword } = req.body
 
-        const findedUser = await User.findById(req.user._id)
+        // `password` is hidden by default (`select: false`), so we must select it for verification.
+        const findedUser = await User.findById(req.user._id).select('+password')
 
         const isPasswordCorrect = await bcrypt.compare(oldPassword, findedUser.password)
         if (!isPasswordCorrect) return next(createError(401, 'Wrong Credentials'))

@@ -4,8 +4,19 @@ import Voucher from '../models/voucher.js'
 import Lead from '../models/lead.js'
 import Notification from '../models/notification.js'
 import { createError } from '../utils/error.js'
-import validator from 'validator'
 import bcrypt from 'bcryptjs'
+
+const verifyCurrentUserPassword = async (userId, password) => {
+    if (!password) return createError(400, 'Password is required')
+
+    const admin = await User.findById(userId).select('+password')
+    if (!admin) return createError(404, 'User not exist')
+
+    const isPasswordCorrect = await bcrypt.compare(password, admin.password)
+    if (!isPasswordCorrect) return createError(401, 'Incorrect Password')
+
+    return null
+}
 
 export const getApproval = async (req, res, next) => {
     try {
@@ -63,19 +74,16 @@ export const acceptVoucherApproval = async (req, res, next) => {
 
         const { approvalId } = req.params;
         const { password } = req.body;
-        const { adminID } = req.query;
 
 
         const approval = await Approval.findById(approvalId)
+        if (!approval) return next(createError(404, 'Approval not exist'))
 
-        const admin = await User.findById(req.user._id)
-        const inputPassword = password;
-        const savedPassword = admin?.password
-        const isPasswordCorrect = await bcrypt.compare(inputPassword, savedPassword)
-
-        if (!isPasswordCorrect) return next(createError(401, 'Incorrect Password'))
+        const passwordError = await verifyCurrentUserPassword(req.user._id, password)
+        if (passwordError) return next(passwordError)
 
         const voucher = await Voucher.findOne({ uid: approval.data.uid })
+        if (!voucher) return next(createError(404, 'Voucher not exist'))
 
         await Approval.findByIdAndUpdate(approvalId, { $set: { status: 'accepted' } }, { new: true })
         const result = await Voucher.findByIdAndUpdate(
@@ -96,15 +104,14 @@ export const rejectVoucherApproval = async (req, res, next) => {
         const { password } = req.body;
 
         const approval = await Approval.findById(approvalId)
+        if (!approval) return next(createError(404, 'Approval not exist'))
 
-        const admin = await User.findById(req.user._id)
-        const inputPassword = password;
-        const savedPassword = admin?.password
-        const isPasswordCorrect = await bcrypt.compare(inputPassword, savedPassword)
-        if (!isPasswordCorrect) return next(createError(401, 'Incorrect Password'))
+        const passwordError = await verifyCurrentUserPassword(req.user._id, password)
+        if (passwordError) return next(passwordError)
 
 
         const voucher = await Voucher.findOne({ uid: approval.data.uid })
+        if (!voucher) return next(createError(404, 'Voucher not exist'))
 
         await Approval.findByIdAndUpdate(approvalId, { $set: { status: 'rejected' } }, { new: true })
         const result = await Voucher.findByIdAndUpdate(

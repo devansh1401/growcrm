@@ -2,7 +2,9 @@ import { Schema, model } from 'mongoose'
 import { generateUniqueIdentifier } from '../utils/utils.js'
 
 const userSchema = Schema({
-    password: { type: String, required: false, },
+    // Never expose password hashes through API responses.
+    // `select: false` keeps it out of normal queries; transforms below also strip it.
+    password: { type: String, required: false, select: false },
     firstName: { type: String, required: false },
     lastName: { type: String, required: false },
     username: { type: String, required: true },
@@ -12,7 +14,23 @@ const userSchema = Schema({
     email: { type: String, required: false, default: '' },
     role: { type: String, required: true, default: 'client', enum: ['client', 'employee', 'manager', 'super_admin'] },
     uid: { type: String },
-}, { timestamps: true })
+}, {
+    timestamps: true,
+    toJSON: {
+        transform: (doc, ret) => {
+            delete ret.password;
+            delete ret.__v;
+            return ret;
+        }
+    },
+    toObject: {
+        transform: (doc, ret) => {
+            delete ret.password;
+            delete ret.__v;
+            return ret;
+        }
+    }
+})
 
 
 // Before saving a new document, generate a unique readable identifier
